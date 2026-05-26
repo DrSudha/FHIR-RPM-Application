@@ -14,7 +14,6 @@ export default function UserAvatarUploadForm({ user, uploadAction }: UserAvatarU
     <form
       className="auth-avatar-form"
       action={uploadAction}
-      encType="multipart/form-data"
     >
       <input type="hidden" name="userId" value={user.id} />
       <UserAvatar name={user.name} avatarPath={user.avatarPath} size={40} />
