@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, UserPlus, Edit3, Heart, RefreshCw, ChevronRight, AlertCircle, ClipboardList, Bell, CheckCircle2, Circle } from 'lucide-react';
+import { Search, UserPlus, Edit3, Heart, RefreshCw, ChevronRight, AlertCircle, AlertTriangle, ClipboardList, Bell, CheckCircle2, Circle } from 'lucide-react';
 import PatientForm from '@/components/PatientForm';
 import WeightExploreModal, { type WeightExplorePatient } from '@/components/WeightExploreModal';
 import MedicationRefillModal, {
@@ -16,6 +16,7 @@ import {
   getGeneralCareSubCategoryLabel,
 } from '@/lib/careCategory';
 import { getPatientPhone } from '@/lib/patientContact';
+import { getPatientAllergies, hasRecordedPatientAllergies, formatAllergiesListTooltip } from '@/lib/patientAllergies';
 import {
   resolveCardiacVitalsTask,
   resolveMedicationRefillsTask,
@@ -32,7 +33,9 @@ import {
 } from '@/lib/taskVitalOverrides';
 import {
   groupGeneralCarePatientsBySubcategory,
+  recordPatientListTouch,
   sortPatientsByRecentActivity,
+  type PatientListTouchTimes,
 } from '@/lib/patientListSort';
 import {
   areAllRefillTasksComplete,
@@ -48,6 +51,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingPatient, setEditingPatient] = useState<any | undefined>(undefined);
+  const [patientListTouchTimes, setPatientListTouchTimes] = useState<PatientListTouchTimes>({});
   
   type PortalTab = 'tasks' | 'notifications';
   type CareCategory = 'diabetic' | 'cardiac' | 'other';
@@ -501,9 +505,9 @@ export default function Home() {
       
       // Append name search parameter and request condition revinclude
       if (query.trim()) {
-        url += `?name=${encodeURIComponent(query.trim())}&_revinclude=Condition:patient`;
+        url += `?name=${encodeURIComponent(query.trim())}&_revinclude=Condition:patient&_sort=-_lastUpdated`;
       } else {
-        url += '?_count=45&_revinclude=Condition:patient';
+        url += '?_count=100&_revinclude=Condition:patient&_sort=-_lastUpdated';
       }
 
       console.log('Fetching patients from proxy:', url);
@@ -544,6 +548,62 @@ export default function Home() {
       setIsLoading(false);
     }
   }, []);
+
+  const mergeSavedPatientIntoList = useCallback(
+    async (patientId: string, careCategory: CareCategory) => {
+      try {
+        const response = await fetch(
+          `/api/fhir/Patient/${patientId}?_revinclude=Condition:patient`
+        );
+        if (!response.ok) return;
+
+        const data = await response.json();
+        let patientResource: any | null = null;
+
+        if (data.resourceType === 'Patient') {
+          patientResource = data;
+        } else if (data.resourceType === 'Bundle' && data.entry) {
+          patientResource =
+            data.entry
+              .map((entry: any) => entry.resource)
+              .find((resource: any) => resource?.resourceType === 'Patient' && resource.id === patientId) ??
+            null;
+        }
+
+        if (!patientResource) return;
+
+        const careProfiles = await resolvePatientCareProfiles([patientId]);
+        const enriched = {
+          ...patientResource,
+          clinicalCategory: careProfiles[patientId]?.category ?? careCategory,
+          generalCareSubCategory: careProfiles[patientId]?.generalCareSubCategory ?? null,
+        };
+
+        setPatients((current) => {
+          const withoutSaved = current.filter((patient) => patient.id !== patientId);
+          return [enriched, ...withoutSaved];
+        });
+      } catch (err) {
+        console.error('Failed to merge saved patient into list:', err);
+      }
+    },
+    []
+  );
+
+  const handlePatientSaved = useCallback(
+    async (result: { patientId: string; careCategory: CareCategory }) => {
+      setPatientListTouchTimes((current) => recordPatientListTouch(current, result.patientId));
+      setExpandedCareCategories((current) => {
+        const next = new Set(current);
+        next.add(result.careCategory);
+        return next;
+      });
+
+      await fetchPatients(searchQuery);
+      await mergeSavedPatientIntoList(result.patientId, result.careCategory);
+    },
+    [fetchPatients, mergeSavedPatientIntoList, searchQuery]
+  );
 
   // Initial load
   useEffect(() => {
@@ -915,25 +975,29 @@ export default function Home() {
   const patientsByCategory = useMemo(
     (): Record<CareCategory, any[]> => ({
       diabetic: sortPatientsByRecentActivity(
-        patients.filter((p) => p.clinicalCategory === 'diabetic')
+        patients.filter((p) => p.clinicalCategory === 'diabetic'),
+        patientListTouchTimes
       ),
       cardiac: sortPatientsByRecentActivity(
-        patients.filter((p) => p.clinicalCategory === 'cardiac')
+        patients.filter((p) => p.clinicalCategory === 'cardiac'),
+        patientListTouchTimes
       ),
       other: sortPatientsByRecentActivity(
-        patients.filter((p) => p.clinicalCategory === 'other')
+        patients.filter((p) => p.clinicalCategory === 'other'),
+        patientListTouchTimes
       ),
     }),
-    [patients]
+    [patients, patientListTouchTimes]
   );
 
   const generalCareSubgroups = useMemo(
     () =>
       groupGeneralCarePatientsBySubcategory(
         patientsByCategory.other,
-        getGeneralCareSubCategoryLabel
+        getGeneralCareSubCategoryLabel,
+        patientListTouchTimes
       ),
-    [patientsByCategory.other]
+    [patientsByCategory.other, patientListTouchTimes]
   );
 
   const visibleCareCategories = CARE_CATEGORY_GROUPS.filter(
@@ -957,6 +1021,8 @@ export default function Home() {
     const gender = patient.gender || 'unknown';
     const birthDateStr = patient.birthDate;
     const patientPhone = getPatientPhone(patient);
+    const allergyText = getPatientAllergies(patient);
+    const allergyTooltip = formatAllergiesListTooltip(allergyText);
     const taskHighlight = activeTaskView?.highlights.get(patient.id);
 
     return (
@@ -972,6 +1038,18 @@ export default function Home() {
             <div className="patient-name-stack">
               <div className="patient-name-row">
                 <PatientNameHoverPreview patient={patient} fullName={fullName} />
+                {hasRecordedPatientAllergies(patient) && (
+                  <span
+                    className="patient-allergy-indicator"
+                    data-tooltip={allergyTooltip}
+                    title={allergyTooltip}
+                    tabIndex={0}
+                    aria-label={allergyTooltip}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <AlertTriangle size={13} strokeWidth={2.25} aria-hidden="true" />
+                  </span>
+                )}
                 {patient.clinicalCategory === 'other' &&
                   patient.generalCareSubCategory &&
                   !options?.hideSubcategoryBadge && (
@@ -1491,7 +1569,7 @@ export default function Home() {
         isOpen={isFormOpen}
         onClose={() => setIsFormOpen(false)}
         patientToEdit={editingPatient}
-        onSuccess={() => fetchPatients(searchQuery)}
+        onSuccess={handlePatientSaved}
       />
 
       <style jsx global>{`

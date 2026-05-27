@@ -246,6 +246,47 @@ h1, h2, h3, h4, h5, h6 {
   opacity: 0.7;
 }
 
+.birth-date-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.birth-date-input {
+  width: 100%;
+  padding-right: 2.5rem;
+  color-scheme: light;
+}
+
+.birth-date-input::-webkit-calendar-picker-indicator {
+  display: none;
+}
+
+.birth-date-calendar-btn {
+  position: absolute;
+  right: 0.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--primary);
+  cursor: pointer;
+}
+
+.birth-date-calendar-btn:hover:not(:disabled) {
+  background: hsla(var(--primary-hsl), 0.08);
+}
+
+.birth-date-calendar-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 /* Grid & Layout Utilities */
 .dashboard-grid {
   display: grid;
@@ -1039,8 +1080,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .lipid-panel-chart-container {
-  height: 96px;
-  min-height: 96px;
+  height: 130px;
+  min-height: 130px;
 }
 
 .toggle-group {
@@ -1152,6 +1193,31 @@ h1, h2, h3, h4, h5, h6 {
   .wearable-metrics-panel-sleep .wearable-metrics-card {
     flex: 1 1 auto;
     min-height: calc(2 * var(--lab-chart-card-block) + 0.75rem);
+  }
+
+  .wearable-metrics-panel-lab .wearable-metrics-panel-content {
+    flex: 1 1 auto;
+  }
+
+  .wearable-metrics-panel-lab .lab-charts-stack {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: calc(2 * var(--lab-chart-card-block) + 0.75rem);
+  }
+
+  /* Grow lipid chart to fill remaining lab column height — aligns with step/sleep cards */
+  .lab-chart-card:has(.lipid-panel-chart-container) {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .lipid-panel-chart-container {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 130px;
   }
 }
 
@@ -2134,6 +2200,70 @@ h1, h2, h3, h4, h5, h6 {
   flex-shrink: 0;
 }
 
+.patient-allergy-indicator {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.14);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  cursor: help;
+}
+
+.patient-allergy-indicator::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 0.45rem);
+  transform: translateX(-50%);
+  min-width: 5rem;
+  max-width: 14rem;
+  padding: 0.4rem 0.55rem;
+  border-radius: 8px;
+  background: #1e293b;
+  color: #ffffff;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: center;
+  white-space: normal;
+  word-break: break-word;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.22);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+  z-index: 30;
+}
+
+.patient-allergy-indicator::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 0.15rem);
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #1e293b;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+  z-index: 30;
+}
+
+.patient-allergy-indicator:hover::after,
+.patient-allergy-indicator:hover::before,
+.patient-allergy-indicator:focus-visible::after,
+.patient-allergy-indicator:focus-visible::before {
+  opacity: 1;
+  visibility: visible;
+}
+
 .patient-subcategory-list {
   display: flex;
   flex-direction: column;
@@ -2500,13 +2630,37 @@ h1, h2, h3, h4, h5, h6 {
   gap: 1rem;
 }
 
-.demographics-anthropometrics {
+.demographics-anthropometrics,
+.demographics-allergies {
   padding: 0.55rem 0.75rem;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.22);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   max-width: 100%;
+}
+
+.demographics-allergies-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.625rem;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  min-height: calc(3 * 0.75rem * 1.45 + 2 * 0.15rem);
+}
+
+.demographics-allergies-label {
+  color: rgba(255, 255, 255, 0.72);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.demographics-allergies-value {
+  color: #ffffff;
+  font-weight: 600;
+  text-align: right;
+  word-break: break-word;
 }
 
 .demographics-anthropometrics-row {
@@ -2544,9 +2698,14 @@ h1, h2, h3, h4, h5, h6 {
 
 .demographics-details-row {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1.25rem;
-  align-items: start;
+  grid-template-columns:
+    minmax(0, 0.8fr)
+    minmax(0, 1.05fr)
+    minmax(0, 0.65fr)
+    minmax(5.75rem, 0.95fr)
+    minmax(7.5rem, 1.1fr);
+  gap: 0.75rem 1rem;
+  align-items: stretch;
   border-top: 1px solid rgba(255, 255, 255, 0.15);
   padding-top: 1rem;
 }
@@ -2573,6 +2732,12 @@ h1, h2, h3, h4, h5, h6 {
 @media (max-width: 900px) {
   .demographics-details-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .demographics-allergies,
+  .demographics-anthropometrics {
+    grid-column: 1 / -1;
   }
 }
 

@@ -18,6 +18,13 @@ import {
   getPatientPhone,
   isValidPatientPhone,
 } from '@/lib/patientContact';
+import {
+  applyAllergiesToPatient,
+  getPatientAllergies,
+  MAX_PATIENT_ALLERGIES_LENGTH,
+  normalizeAllergiesInput,
+} from '@/lib/patientAllergies';
+import BirthDatePicker from '@/components/BirthDatePicker';
 
 const selectChevronStyle = {
   appearance: 'none' as const,
@@ -28,7 +35,7 @@ interface PatientFormProps {
   isOpen: boolean;
   onClose: () => void;
   patientToEdit?: any; // The original FHIR Patient resource if editing
-  onSuccess: () => void;
+  onSuccess: (result: { patientId: string; careCategory: CareCategory }) => void;
 }
 
 export default function PatientForm({
@@ -42,6 +49,7 @@ export default function PatientForm({
   const [gender, setGender] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [phone, setPhone] = useState('');
+  const [allergies, setAllergies] = useState('');
   const [height, setHeight] = useState('');
   const [careCategory, setCareCategory] = useState<CareCategory | ''>('');
   const [initialCareCategory, setInitialCareCategory] = useState<CareCategory | ''>('');
@@ -66,6 +74,7 @@ export default function PatientForm({
       setFamilyName(family);
       setGender(g);
       setPhone(getPatientPhone(patientToEdit));
+      setAllergies(getPatientAllergies(patientToEdit));
       setHeight(''); // Clear initially, will fetch below
       
       // If server returned YYYY-MM-DD, convert to DD-MM-YYYY for the form
@@ -121,6 +130,7 @@ export default function PatientForm({
       setGender('');
       setBirthDate('');
       setPhone('');
+      setAllergies('');
       setHeight('');
       setCareCategory('');
       setInitialCareCategory('');
@@ -233,19 +243,24 @@ export default function PatientForm({
         url = `/api/fhir/Patient/${patientToEdit.id}`;
         method = 'PUT';
         // Preserve all original fields to avoid deleting server data, but update name, gender, birthDate
-        patientResource = {
-          ...patientToEdit,
-          name: [
-            {
-              use: 'official',
-              family: familyName.trim(),
-              given: givenName.trim().split(/\s+/),
-            },
-          ],
-          gender: gender,
-          birthDate: standardBirthDate,
-          telecom: buildPatientTelecomWithPhone(phone, patientToEdit.telecom),
-        };
+        patientResource = applyAllergiesToPatient(
+          {
+            ...patientToEdit,
+            name: [
+              {
+                use: 'official',
+                family: familyName.trim(),
+                given: givenName.trim().split(/\s+/),
+              },
+            ],
+            gender: gender,
+            birthDate: standardBirthDate,
+            telecom: buildPatientTelecomWithPhone(phone, patientToEdit.telecom),
+          },
+          allergies
+        );
+      } else {
+        patientResource = applyAllergiesToPatient(patientResource, allergies);
       }
 
       // 1. Save Patient
@@ -349,7 +364,10 @@ export default function PatientForm({
         }
       }
 
-      onSuccess();
+      onSuccess({
+        patientId: savedPatientId,
+        careCategory: categoryToSave,
+      });
       onClose();
     } catch (err: any) {
       console.error('Error saving patient:', err);
@@ -518,16 +536,32 @@ export default function PatientForm({
             )}
           </div>
 
+          <div className="form-group">
+            <label htmlFor="allergies" className="form-label">
+              Allergies <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optional)</span>
+            </label>
+            <input
+              id="allergies"
+              type="text"
+              className="form-input"
+              placeholder="e.g. Penicillin, Latex — leave blank for NKA"
+              value={allergies}
+              onChange={(e) => setAllergies(normalizeAllergiesInput(e.target.value))}
+              disabled={isSubmitting}
+              maxLength={MAX_PATIENT_ALLERGIES_LENGTH}
+            />
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'block' }}>
+              Free text, up to {MAX_PATIENT_ALLERGIES_LENGTH} characters. Leave empty to record no known allergies (NKA).
+            </span>
+          </div>
+
           <div className="grid-cols-2">
             <div className="form-group">
-              <label htmlFor="birthDate" className="form-label">Date of Birth (DD-MM-YYYY)</label>
-              <input
+              <label htmlFor="birthDate" className="form-label">Date of Birth</label>
+              <BirthDatePicker
                 id="birthDate"
-                type="text"
-                className="form-input"
-                placeholder="e.g. 25-05-1990"
                 value={birthDate}
-                onChange={(e) => setBirthDate(e.target.value)}
+                onChange={setBirthDate}
                 disabled={isSubmitting}
               />
               {validationErrors.birthDate && (
@@ -558,7 +592,7 @@ export default function PatientForm({
           </div>
 
           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '1.25rem' }}>
-            * Date of birth format must be exactly Day-Month-Year (e.g. 04-12-1985). Phone number is required for patient contact. Care category and General Care sub category are stored as clinical Conditions linked to this patient. Height is recorded as a separate Observation.
+            * Click the calendar icon to choose date of birth and scroll back to earlier years. Phone number is required for patient contact. Allergies are optional; leave blank for NKA. Care category and General Care sub category are stored as clinical Conditions linked to this patient. Height is recorded as a separate Observation.
           </span>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem', borderTop: '1px solid var(--border-card)', paddingTop: '1.25rem' }}>

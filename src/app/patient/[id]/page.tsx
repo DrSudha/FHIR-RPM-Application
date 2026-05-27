@@ -48,6 +48,10 @@ import {
 } from '@/lib/careCategory';
 import { hasMultipleSclerosisCondition, getMultipleSclerosisOnsetDate, formatMsDiagnosisLabel } from '@/lib/msCondition';
 import { EGFR_ABNORMAL_THRESHOLD, formatEgfrValue, isEgfrAbnormal } from '@/lib/egfr';
+import {
+  formatAllergiesBannerDisplay,
+  getPatientAllergies,
+} from '@/lib/patientAllergies';
 import { buildClinicalWorkspaceSnapshot } from '@/lib/buildClinicalWorkspaceSnapshot';
 import {
   getClinicalWorkspaceCohort,
@@ -1979,6 +1983,7 @@ export default function PatientDetails() {
   const patientFullName = [patientGivenName, patientFamilyName].filter(Boolean).join(' ') || 'Unnamed Patient';
   const patientGender = patient.gender || 'unknown';
   const patientBirthDate = patient.birthDate;
+  const patientAllergiesDisplay = formatAllergiesBannerDisplay(getPatientAllergies(patient));
   const showClinicalWorkspace = hasClinicalWorkspace(patient.id);
 
   return (
@@ -2013,6 +2018,14 @@ export default function PatientDetails() {
           <div className="demographics-detail-item">
             <div className="demographics-item-label">Age</div>
             <div className="demographics-item-value">{calculateAge(patientBirthDate)}</div>
+          </div>
+          <div className="demographics-allergies" aria-label="Patient allergies">
+            <div className="demographics-allergies-row">
+              <span className="demographics-allergies-label">Allergies:</span>
+              <span className="demographics-allergies-value" title={patientAllergiesDisplay}>
+                {patientAllergiesDisplay}
+              </span>
+            </div>
           </div>
           <div className="demographics-anthropometrics" aria-label="Height, weight, and BMI">
             <div className="demographics-anthropometrics-row">
