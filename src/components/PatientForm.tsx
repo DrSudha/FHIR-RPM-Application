@@ -33,14 +33,16 @@ const selectChevronStyle = {
 };
 
 interface PatientFormProps {
-  isOpen: boolean;
+  isOpen?: boolean;
+  variant?: 'modal' | 'page';
   onClose: () => void;
   patientToEdit?: any; // The original FHIR Patient resource if editing
   onSuccess: (result: { patientId: string; careCategory: CareCategory }) => void;
 }
 
 export default function PatientForm({
-  isOpen,
+  isOpen = true,
+  variant = 'modal',
   onClose,
   patientToEdit,
   onSuccess,
@@ -145,9 +147,9 @@ export default function PatientForm({
     }
     setError(null);
     setValidationErrors({});
-  }, [patientToEdit, isOpen]);
+  }, [patientToEdit, isOpen, variant]);
 
-  if (!isOpen) return null;
+  if (variant === 'modal' && !isOpen) return null;
 
   // Validate the DD-MM-YYYY date format
   const validateDate = (dateStr: string): boolean => {
@@ -383,7 +385,9 @@ export default function PatientForm({
         patientId: savedPatientId,
         careCategory: categoryToSave,
       });
-      onClose();
+      if (variant === 'modal') {
+        onClose();
+      }
     } catch (err: any) {
       console.error('Error saving patient:', err);
       setError(err.message || 'An unexpected error occurred. Please try again.');
@@ -392,27 +396,18 @@ export default function PatientForm({
     }
   };
 
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content glass-card" onClick={(e) => e.stopPropagation()}>
-        <div className="flex-between" style={{ borderBottom: '1px solid var(--border-card)', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
-          <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.25rem' }}>
-            <UserPlus size={20} className="text-muted" style={{ color: 'var(--primary)' }} />
-            {patientToEdit ? 'Edit Patient Demographics' : 'Register New Patient'}
-          </h2>
-          <button className="btn btn-secondary btn-icon" onClick={onClose} aria-label="Close modal">
-            <X size={18} />
-          </button>
+  const formTitle = patientToEdit ? 'Edit Patient Demographics' : 'Register New Patient';
+
+  const formBody = (
+    <>
+      {error && (
+        <div className="alert alert-danger">
+          <AlertCircle size={18} style={{ flexShrink: 0 }} />
+          <div>{error}</div>
         </div>
+      )}
 
-        {error && (
-          <div className="alert alert-danger">
-            <AlertCircle size={18} style={{ flexShrink: 0 }} />
-            <div>{error}</div>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit}>
           <div className="grid-cols-2">
             <div className="form-group">
               <label htmlFor="givenName" className="form-label">Given Name(s)</label>
@@ -629,6 +624,36 @@ export default function PatientForm({
             </button>
           </div>
         </form>
+    </>
+  );
+
+  if (variant === 'page') {
+    return (
+      <div className="patient-form-page glass-card">
+        <div className="patient-form-page-header">
+          <h2 className="patient-form-page-title">
+            <UserPlus size={20} style={{ color: 'var(--primary)' }} />
+            {formTitle}
+          </h2>
+        </div>
+        {formBody}
+      </div>
+    );
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content glass-card" onClick={(e) => e.stopPropagation()}>
+        <div className="flex-between" style={{ borderBottom: '1px solid var(--border-card)', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.25rem' }}>
+            <UserPlus size={20} className="text-muted" style={{ color: 'var(--primary)' }} />
+            {formTitle}
+          </h2>
+          <button className="btn btn-secondary btn-icon" onClick={onClose} aria-label="Close modal">
+            <X size={18} />
+          </button>
+        </div>
+        {formBody}
       </div>
     </div>
   );

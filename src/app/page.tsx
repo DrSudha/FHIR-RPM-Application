@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation';
 import { Search, UserPlus, Edit3, Heart, RefreshCw, ChevronRight, AlertCircle, AlertTriangle, ClipboardList, Bell, CheckCircle2, Circle } from 'lucide-react';
 import PatientForm from '@/components/PatientForm';
+import PortalSidebar from '@/components/PortalSidebar';
 import WeightExploreModal, { type WeightExplorePatient } from '@/components/WeightExploreModal';
 import MedicationRefillModal, {
   type MedicationRefillPatient,
@@ -87,6 +88,28 @@ export default function Home() {
     patients: WeightExplorePatient[];
   } | null>(null);
   const patientPanelRef = useRef<HTMLDivElement>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch('/api/auth/me')
+      .then(async (response) => {
+        if (!response.ok) return null;
+        const data = await response.json();
+        return data.user as { role?: string } | null;
+      })
+      .then((user) => {
+        if (!cancelled) setIsAdmin(user?.role === 'admin');
+      })
+      .catch(() => {
+        if (!cancelled) setIsAdmin(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handlePortalTabClick = (tab: PortalTab) => {
     setExpandedPortalTab((current) => (current === tab ? null : tab));
@@ -717,9 +740,8 @@ export default function Home() {
     setIsFormOpen(true);
   };
 
-  const handleCreateClick = () => {
-    setEditingPatient(undefined);
-    setIsFormOpen(true);
+  const handleRegisterClick = () => {
+    router.push('/patient/register');
   };
 
   const handleRowClick = (patientId: string) => {
@@ -1108,14 +1130,14 @@ export default function Home() {
     options?: { hideSubcategoryBadge?: boolean }
   ) => (
     <div className="table-container" style={{ border: 'none', margin: 0, borderRadius: 0 }}>
-      <table className="premium-table">
+      <table className="premium-table patient-list-table">
         <thead>
           <tr>
             <th>Patient Full Name</th>
             <th>Gender</th>
             <th>Age</th>
             <th>Phone</th>
-            <th style={{ textAlign: 'right' }}>Actions</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -1145,7 +1167,11 @@ export default function Home() {
 
       </header>
 
-      {/* Portal toolbar: tabs + register */}
+      <div className="portal-main-layout">
+        <PortalSidebar isAdmin={isAdmin} active="home" />
+
+        <div className="portal-main-content">
+      {/* Portal toolbar: tasks & notifications tabs */}
       <div className={`portal-toolbar ${expandedPortalTab ? 'portal-toolbar-expanded' : 'portal-toolbar-collapsed'}`}>
         <div className="portal-tabs">
           <button
@@ -1169,10 +1195,6 @@ export default function Home() {
             {attentionCount > 0 && <span className="portal-tab-badge portal-tab-badge-alert">{attentionCount}</span>}
           </button>
         </div>
-        <button className="btn btn-primary portal-toolbar-action" onClick={handleCreateClick}>
-          <UserPlus size={16} />
-          Register Patient
-        </button>
       </div>
 
       {/* Tab panel (expanded on tab click only) */}
@@ -1472,7 +1494,7 @@ export default function Home() {
           {patients.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '4rem 2rem' }}>
               <p className="text-muted" style={{ marginBottom: '1.5rem' }}>No patients found.</p>
-              <button className="btn btn-primary" onClick={handleCreateClick}>
+              <button className="btn btn-primary" onClick={handleRegisterClick}>
                 <UserPlus size={14} />
                 Register Patient
               </button>
@@ -1551,6 +1573,9 @@ export default function Home() {
         </div>
       )}
 
+        </div>
+      </div>
+
       {/* Register/Edit Patient Form Modal */}
       {weightExploreView && (
         <WeightExploreModal
@@ -1569,12 +1594,17 @@ export default function Home() {
         />
       )}
 
+      {editingPatient && (
       <PatientForm
         isOpen={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
+        onClose={() => {
+          setIsFormOpen(false);
+          setEditingPatient(undefined);
+        }}
         patientToEdit={editingPatient}
         onSuccess={handlePatientSaved}
       />
+      )}
 
       <style jsx global>{`
         .pulse {

@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { Power, Settings2 } from 'lucide-react';
+import { Power } from 'lucide-react';
 import { logoutAction } from '@/app/actions/auth';
 import UserAvatar from '@/components/UserAvatar';
 import { ROLE_LABELS, type UserRole } from '@/lib/auth/types';
@@ -77,16 +76,6 @@ export default function HeaderUserChip() {
           <div className="header-user-session-footer">
             <span className="header-user-login">Logged in at: {formatLoggedInAt(user.loggedInAt)}</span>
             <div className="header-user-actions-row">
-              {user.role === 'admin' && (
-                <Link
-                  href="/admin/users"
-                  className="header-user-manage"
-                  title="User management"
-                  aria-label="User management"
-                >
-                  <Settings2 size={14} strokeWidth={2.25} />
-                </Link>
-              )}
               <button
                 type="button"
                 className="header-user-logout"

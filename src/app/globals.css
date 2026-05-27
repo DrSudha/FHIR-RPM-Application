@@ -167,6 +167,18 @@ h1, h2, h3, h4, h5, h6 {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   outline: none;
   white-space: nowrap;
+  line-height: 1.25;
+}
+
+a.btn {
+  text-decoration: none;
+}
+
+a.btn-primary,
+a.btn-primary:hover,
+a.btn-primary:focus,
+a.btn-primary:visited {
+  color: #ffffff;
 }
 
 .btn-primary {
@@ -2499,11 +2511,140 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-/* Portal toolbar: tabs left, actions right */
+/* Portal layout: sidebar + main content */
+.portal-main-layout {
+  display: grid;
+  grid-template-columns: 13.75rem minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.portal-sidebar {
+  padding: 1rem;
+  border-radius: 14px;
+  border: 1px solid var(--border-card);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+  position: sticky;
+  top: 1rem;
+}
+
+.portal-sidebar-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin: 0 0 0.75rem 0.25rem;
+}
+
+.portal-sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.portal-sidebar-btn {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.portal-sidebar-btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+  filter: grayscale(0.35);
+}
+
+.portal-sidebar-btn:disabled:hover {
+  background: linear-gradient(135deg, hsl(var(--primary-hsl)) 0%, hsl(174, 48%, 38%) 100%);
+  transform: none;
+  box-shadow: 0 2px 8px hsla(var(--primary-hsl), 0.25);
+}
+
+.portal-sidebar-btn-active:not(:disabled) {
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35), 0 2px 8px hsla(var(--primary-hsl), 0.25);
+}
+
+.portal-main-content {
+  min-width: 0;
+}
+
+.patient-register-toolbar {
+  margin-bottom: 1rem;
+}
+
+.patient-form-page {
+  padding: 1.5rem;
+}
+
+.patient-form-page-header {
+  border-bottom: 1px solid var(--border-card);
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.patient-form-page-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.25rem;
+  margin: 0;
+}
+
+/* Patient list table — uniform column spacing in narrower main panel */
+.patient-list-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.patient-list-table th,
+.patient-list-table td {
+  padding: 0.875rem 1rem;
+}
+
+.patient-list-table td:not(.patient-name-cell) {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.patient-list-table .patient-name-cell {
+  white-space: normal;
+  overflow: visible;
+}
+
+.patient-list-table th:nth-child(1),
+.patient-list-table td:nth-child(1) {
+  width: 34%;
+}
+
+.patient-list-table th:nth-child(2),
+.patient-list-table td:nth-child(2) {
+  width: 14%;
+}
+
+.patient-list-table th:nth-child(3),
+.patient-list-table td:nth-child(3) {
+  width: 12%;
+}
+
+.patient-list-table th:nth-child(4),
+.patient-list-table td:nth-child(4) {
+  width: 22%;
+}
+
+.patient-list-table th:nth-child(5),
+.patient-list-table td:nth-child(5) {
+  width: 18%;
+  text-align: right;
+}
+
+/* Portal toolbar: tasks & notifications tabs */
 .portal-toolbar {
   display: flex;
   align-items: flex-end;
-  justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
   border-bottom: 1px solid var(--border-card);
@@ -2523,20 +2664,24 @@ h1, h2, h3, h4, h5, h6 {
   min-width: 0;
 }
 
-.portal-toolbar-action {
-  flex-shrink: 0;
-  margin-bottom: -1px;
+@media (max-width: 900px) {
+  .portal-main-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .portal-sidebar {
+    position: static;
+  }
+
+  .portal-sidebar-nav {
+    flex-direction: column;
+  }
 }
 
 @media (max-width: 640px) {
   .portal-toolbar {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .portal-toolbar-action {
-    width: 100%;
-    margin-bottom: 0.75rem;
   }
 }
 
