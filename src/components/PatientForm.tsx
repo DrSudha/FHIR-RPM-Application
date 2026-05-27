@@ -20,9 +20,10 @@ import {
 } from '@/lib/patientContact';
 import {
   applyAllergiesToPatient,
-  getPatientAllergies,
+  fetchPatientAllergySummary,
   MAX_PATIENT_ALLERGIES_LENGTH,
   normalizeAllergiesInput,
+  syncPatientAllergies,
 } from '@/lib/patientAllergies';
 import BirthDatePicker from '@/components/BirthDatePicker';
 
@@ -74,7 +75,12 @@ export default function PatientForm({
       setFamilyName(family);
       setGender(g);
       setPhone(getPatientPhone(patientToEdit));
-      setAllergies(getPatientAllergies(patientToEdit));
+      setAllergies('');
+      void fetchPatientAllergySummary(patientToEdit.id, patientToEdit)
+        .then(setAllergies)
+        .catch((err) => {
+          console.error('Error fetching patient allergies:', err);
+        });
       setHeight(''); // Clear initially, will fetch below
       
       // If server returned YYYY-MM-DD, convert to DD-MM-YYYY for the form
@@ -364,6 +370,15 @@ export default function PatientForm({
         }
       }
 
+      // 5. Sync allergies as FHIR AllergyIntolerance resources (SNOMED-coded when matched)
+      if (savedPatientId) {
+        try {
+          await syncPatientAllergies(savedPatientId, allergies);
+        } catch (allergyErr) {
+          console.error('Failed to sync allergy intolerance resources:', allergyErr);
+        }
+      }
+
       onSuccess({
         patientId: savedPatientId,
         careCategory: categoryToSave,
@@ -544,14 +559,14 @@ export default function PatientForm({
               id="allergies"
               type="text"
               className="form-input"
-              placeholder="e.g. Penicillin, Latex — leave blank for NKA"
+              placeholder="e.g. Peanuts — or Soyabeans for a different patient"
               value={allergies}
               onChange={(e) => setAllergies(normalizeAllergiesInput(e.target.value))}
               disabled={isSubmitting}
               maxLength={MAX_PATIENT_ALLERGIES_LENGTH}
             />
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'block' }}>
-              Free text, up to {MAX_PATIENT_ALLERGIES_LENGTH} characters. Leave empty to record no known allergies (NKA).
+              Free text, up to {MAX_PATIENT_ALLERGIES_LENGTH} characters. Enter one allergen per patient (e.g. Peanuts or Soyabeans). Each is stored separately with its own SNOMED CT code. Leave empty for NKA.
             </span>
           </div>
 

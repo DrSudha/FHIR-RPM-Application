@@ -50,7 +50,7 @@ import { hasMultipleSclerosisCondition, getMultipleSclerosisOnsetDate, formatMsD
 import { EGFR_ABNORMAL_THRESHOLD, formatEgfrValue, isEgfrAbnormal } from '@/lib/egfr';
 import {
   formatAllergiesBannerDisplay,
-  getPatientAllergies,
+  fetchPatientAllergySummary,
 } from '@/lib/patientAllergies';
 import { buildClinicalWorkspaceSnapshot } from '@/lib/buildClinicalWorkspaceSnapshot';
 import {
@@ -201,6 +201,7 @@ export default function PatientDetails() {
   const [edssData, setEdssData] = useState<DataPoint[]>([]);
   const [conditions, setConditions] = useState<any[]>([]);
   const [medications, setMedications] = useState<any[]>([]);
+  const [allergySummary, setAllergySummary] = useState('');
   const [showAllConditions, setShowAllConditions] = useState(false);
   const [showAllMedications, setShowAllMedications] = useState(false);
   
@@ -800,6 +801,8 @@ export default function PatientDetails() {
       }
       const patientData = await patientRes.json();
       setPatient(patientData);
+      const allergies = await fetchPatientAllergySummary(String(id), patientData);
+      setAllergySummary(allergies);
 
       // 2. Fetch Conditions
       const conditionsRes = await fetch(`/api/fhir/Condition?patient=${id}`);
@@ -1983,7 +1986,7 @@ export default function PatientDetails() {
   const patientFullName = [patientGivenName, patientFamilyName].filter(Boolean).join(' ') || 'Unnamed Patient';
   const patientGender = patient.gender || 'unknown';
   const patientBirthDate = patient.birthDate;
-  const patientAllergiesDisplay = formatAllergiesBannerDisplay(getPatientAllergies(patient));
+  const patientAllergiesDisplay = formatAllergiesBannerDisplay(allergySummary);
   const showClinicalWorkspace = hasClinicalWorkspace(patient.id);
 
   return (

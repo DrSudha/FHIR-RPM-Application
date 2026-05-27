@@ -11,9 +11,20 @@
  * Usage: node scripts/seed-maryann-clinical.mjs
  */
 
+import {
+  buildProblemListCondition,
+  buildRxNormMedicationConcept,
+  COMMON_DIAGNOSIS_SNOMED,
+} from './lib/fhir-terminology.mjs';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const ROOT = resolve(__dirname, '..');
+const medicationCatalog = JSON.parse(
+  readFileSync(resolve(ROOT, 'src/data/medication-catalog.json'), 'utf8')
+);
 import {
   LOINC,
   bloodPressureObservation,
@@ -202,14 +213,26 @@ function buildProblemCondition(patientId, text, snomedCode, display, onsetDateTi
   };
 }
 
+function medicationProfile(displayName) {
+  return (
+    medicationCatalog.entries.find(
+      (entry) => entry.displayName.toLowerCase() === displayName.toLowerCase()
+    ) ?? { displayName, rxnormCode: undefined }
+  );
+}
+
 function buildMedicationRequest(patientId, displayName, status, startDaysAgo, endDaysAgo, doseText) {
   const startDate = isoDateDaysAgo(startDaysAgo);
   const endDate = endDaysAgo != null ? isoDateDaysAgo(endDaysAgo) : undefined;
+  const profile = medicationProfile(displayName);
   const request = {
     resourceType: 'MedicationRequest',
     status,
     intent: 'order',
-    medicationCodeableConcept: { text: displayName },
+    medicationCodeableConcept: buildRxNormMedicationConcept(
+      profile.displayName,
+      profile.rxnormCode
+    ),
     subject: { reference: `Patient/${patientId}` },
     authoredOn: startDate,
     dosageInstruction: [
@@ -473,23 +496,21 @@ async function ensureConditions(patientId) {
   const toCreate = [];
   if (!labels.some((label) => label.includes('type 2 diabetes'))) {
     toCreate.push(
-      buildProblemCondition(
+      buildProblemListCondition(
         patientId,
-        'Type 2 diabetes mellitus',
-        '44054006',
-        'Diabetes mellitus type 2',
-        T2DM_ONSET
+        COMMON_DIAGNOSIS_SNOMED.type2Diabetes.display,
+        COMMON_DIAGNOSIS_SNOMED.type2Diabetes,
+        { onsetDateTime: T2DM_ONSET, recordedDate: T2DM_ONSET }
       )
     );
   }
   if (!labels.some((label) => label.includes('neuropathy'))) {
     toCreate.push(
-      buildProblemCondition(
+      buildProblemListCondition(
         patientId,
-        'Diabetic neuropathy',
-        '230572002',
-        'Diabetic neuropathy',
-        NEUROPATHY_ONSET
+        COMMON_DIAGNOSIS_SNOMED.diabeticNeuropathy.display,
+        COMMON_DIAGNOSIS_SNOMED.diabeticNeuropathy,
+        { onsetDateTime: NEUROPATHY_ONSET, recordedDate: NEUROPATHY_ONSET }
       )
     );
   }

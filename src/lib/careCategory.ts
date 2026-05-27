@@ -1,3 +1,9 @@
+import {
+  buildSnomedConditionCode,
+  generalCareSubCategoryFromSnomedCode,
+  GENERAL_CARE_SUBCATEGORY_SNOMED,
+} from '@/lib/snomedCodes';
+
 export type CareCategory = 'diabetic' | 'cardiac' | 'other';
 
 export type GeneralCareSubCategory =
@@ -87,12 +93,24 @@ export function buildGeneralCareSubCategoryCondition(
   patientId: string,
   subCategory: GeneralCareSubCategory
 ) {
+  const snomed = GENERAL_CARE_SUBCATEGORY_SNOMED[subCategory];
   return {
     ...buildEnrolmentConditionBase(patientId),
-    code: {
-      text: getGeneralCareSubCategoryLabel(subCategory),
-    },
+    code: buildSnomedConditionCode(snomed.display, snomed),
   };
+}
+
+function generalCareSubCategoryFromCondition(condition: any): GeneralCareSubCategory | null {
+  const snomedCode = condition.code?.coding?.find(
+    (coding: any) => coding.system === 'http://snomed.info/sct' && coding.code
+  )?.code;
+  if (snomedCode) {
+    const fromSnomed = generalCareSubCategoryFromSnomedCode(snomedCode);
+    if (fromSnomed) return fromSnomed;
+  }
+
+  const text = condition.code?.text || condition.code?.coding?.[0]?.display || '';
+  return generalCareSubCategoryFromText(text);
 }
 
 function generalCareSubCategoryFromText(text: string): GeneralCareSubCategory | null {
@@ -108,7 +126,12 @@ function generalCareSubCategoryFromText(text: string): GeneralCareSubCategory | 
   const byLabel = GENERAL_CARE_SUBCATEGORY_OPTIONS.find(
     (option) => option.label.toLowerCase() === normalized
   );
-  return byLabel?.value ?? null;
+  if (byLabel) return byLabel.value;
+
+  const bySnomedDisplay = Object.entries(GENERAL_CARE_SUBCATEGORY_SNOMED).find(
+    ([, concept]) => concept.display.toLowerCase() === normalized
+  );
+  return bySnomedDisplay ? (bySnomedDisplay[0] as GeneralCareSubCategory) : null;
 }
 
 export function isGeneralCareSubCategoryConditionText(text: string): boolean {
@@ -120,8 +143,7 @@ export function extractGeneralCareSubCategoryFromResources(
 ): GeneralCareSubCategory | null {
   const subCategories = conditions
     .map((cond) => {
-      const text = cond.code?.text || cond.code?.coding?.[0]?.display || '';
-      const subCategory = generalCareSubCategoryFromText(text);
+      const subCategory = generalCareSubCategoryFromCondition(cond);
       if (!subCategory) return null;
       return { subCategory, time: conditionTimestamp(cond) };
     })

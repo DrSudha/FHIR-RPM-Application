@@ -3,6 +3,8 @@ import {
   resolveMedicationProfile,
   frequencyLabel,
 } from '@/lib/medicationCatalog';
+import { getConditionSnomedCoding } from '@/lib/snomedCodes';
+import { findCoding, RXNORM_SYSTEM } from '@/lib/fhirTerminology';
 
 export const CLINICAL_LIST_PREVIEW_COUNT = 4;
 export const MAX_MEDICATIONS_PER_PATIENT = 10;
@@ -17,6 +19,8 @@ export function isEnrolmentCondition(condition: any): boolean {
 }
 
 export function getConditionName(condition: any): string {
+  const snomed = getConditionSnomedCoding(condition);
+  if (snomed?.display) return snomed.display;
   return (
     condition.code?.text ||
     condition.code?.coding?.[0]?.display ||
@@ -46,7 +50,9 @@ export function sortConditionsForDisplay(conditions: any[]): any[] {
 }
 
 export function getMedicationName(medication: any): string {
+  const rxnorm = findCoding(medication.medicationCodeableConcept?.coding, RXNORM_SYSTEM);
   const raw =
+    rxnorm?.display ||
     medication.medicationCodeableConcept?.text ||
     medication.medicationCodeableConcept?.coding?.[0]?.display ||
     medication.medicationReference?.display ||

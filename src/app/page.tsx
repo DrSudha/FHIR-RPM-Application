@@ -16,7 +16,7 @@ import {
   getGeneralCareSubCategoryLabel,
 } from '@/lib/careCategory';
 import { getPatientPhone } from '@/lib/patientContact';
-import { getPatientAllergies, hasRecordedPatientAllergies, formatAllergiesListTooltip } from '@/lib/patientAllergies';
+import { fetchAllergySummariesForPatients, formatAllergiesListTooltip, hasRecordedPatientAllergies } from '@/lib/patientAllergies';
 import {
   resolveCardiacVitalsTask,
   resolveMedicationRefillsTask,
@@ -529,12 +529,16 @@ export default function Home() {
           .map((e: any) => e.resource);
 
         const patientIds = patientResources.map((p: any) => p.id).filter(Boolean);
-        const careProfiles = await resolvePatientCareProfiles(patientIds);
+        const [careProfiles, allergySummaries] = await Promise.all([
+          resolvePatientCareProfiles(patientIds),
+          fetchAllergySummariesForPatients(patientResources),
+        ]);
 
         const parsed = patientResources.map((p: any) => ({
           ...p,
           clinicalCategory: careProfiles[p.id]?.category ?? 'other',
           generalCareSubCategory: careProfiles[p.id]?.generalCareSubCategory ?? null,
+          allergySummary: allergySummaries[p.id] ?? '',
         }));
         
         setPatients(parsed);
@@ -1021,7 +1025,7 @@ export default function Home() {
     const gender = patient.gender || 'unknown';
     const birthDateStr = patient.birthDate;
     const patientPhone = getPatientPhone(patient);
-    const allergyText = getPatientAllergies(patient);
+    const allergyText = patient.allergySummary ?? '';
     const allergyTooltip = formatAllergiesListTooltip(allergyText);
     const taskHighlight = activeTaskView?.highlights.get(patient.id);
 
@@ -1038,7 +1042,7 @@ export default function Home() {
             <div className="patient-name-stack">
               <div className="patient-name-row">
                 <PatientNameHoverPreview patient={patient} fullName={fullName} />
-                {hasRecordedPatientAllergies(patient) && (
+                {hasRecordedPatientAllergies(allergyText) && (
                   <span
                     className="patient-allergy-indicator"
                     data-tooltip={allergyTooltip}

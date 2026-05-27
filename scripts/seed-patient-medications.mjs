@@ -10,6 +10,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { buildRxNormMedicationConcept } from './lib/fhir-terminology.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const catalog = JSON.parse(
@@ -229,6 +230,7 @@ function resolveMedicationProfile(rawName, age, weightKg) {
 function profileByDisplayName(displayName) {
   return catalog.entries.find((entry) => entry.displayName.toLowerCase() === displayName.toLowerCase()) ?? {
     displayName,
+    rxnormCode: undefined,
     doseMg: 10,
     frequency: 1,
     route: 'Oral',
@@ -299,10 +301,7 @@ function markAsActive(med, age, weightKg, activeIndex) {
   const updated = {
     ...med,
     status: 'active',
-    medicationCodeableConcept: {
-      ...(med.medicationCodeableConcept || {}),
-      text: profile.displayName,
-    },
+    medicationCodeableConcept: buildRxNormMedicationConcept(profile.displayName, profile.rxnormCode),
     authoredOn: startDate,
     dosageInstruction: [buildDosageInstruction(profile, startDate, undefined)],
   };
@@ -320,10 +319,7 @@ function markAsCompleted(med, age, weightKg, completedIndex) {
   return {
     ...med,
     status: 'completed',
-    medicationCodeableConcept: {
-      ...(med.medicationCodeableConcept || {}),
-      text: profile.displayName,
-    },
+    medicationCodeableConcept: buildRxNormMedicationConcept(profile.displayName, profile.rxnormCode),
     authoredOn: startDate,
     dosageInstruction: [buildDosageInstruction(profile, startDate, endDate)],
     dispenseRequest: { validityPeriod: { start: startDate, end: endDate } },
@@ -366,10 +362,7 @@ function enrichMedication(med, age, weightKg, index, patientId) {
 
   const updated = {
     ...med,
-    medicationCodeableConcept: {
-      ...(med.medicationCodeableConcept || {}),
-      text: profile.displayName,
-    },
+    medicationCodeableConcept: buildRxNormMedicationConcept(profile.displayName, profile.rxnormCode),
     authoredOn: startDate,
     dosageInstruction: [buildDosageInstruction(profile, startDate, endDate)],
   };
@@ -397,7 +390,7 @@ function buildMedicationRequest(patientId, displayName, age, weightKg, status, s
     resourceType: 'MedicationRequest',
     status,
     intent: 'order',
-    medicationCodeableConcept: { text: profile.displayName },
+    medicationCodeableConcept: buildRxNormMedicationConcept(profile.displayName, profile.rxnormCode),
     subject: { reference: `Patient/${patientId}` },
     authoredOn: startDate,
     dosageInstruction: [buildDosageInstruction(profile, startDate, endDate)],
@@ -429,6 +422,10 @@ function sortConditions(conditions) {
 }
 
 function conditionText(condition) {
+  const snomed = condition.code?.coding?.find(
+    (coding) => coding.system === 'http://snomed.info/sct' && coding.code
+  );
+  if (snomed?.code === '709044004') return 'ckd';
   return (condition.code?.text || condition.code?.coding?.[0]?.display || '').toLowerCase();
 }
 

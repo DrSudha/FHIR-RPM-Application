@@ -3,6 +3,7 @@ import catalogData from '@/data/medication-catalog.json';
 export type MedicationCatalogEntry = {
   match: string[];
   displayName: string;
+  rxnormCode?: string;
   doseMg: number;
   frequency: number;
   route: string;
@@ -94,6 +95,7 @@ export function resolveMedicationProfile(
   const profile = matched ?? {
     match: [],
     displayName: simplifyMedicationDisplayName(rawName),
+    rxnormCode: undefined,
     doseMg: 10,
     frequency: 1,
     route: 'Oral',

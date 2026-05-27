@@ -1,0 +1,45 @@
+{
+  "entries": [
+    { "match": ["penicillin"], "display": "Penicillin", "snomedCode": "91936005", "category": "medication" },
+    { "match": ["amoxicillin"], "display": "Amoxicillin", "snomedCode": "372687004", "category": "medication" },
+    { "match": ["sulfa", "sulfonamide"], "display": "Sulfonamide", "snomedCode": "763875007", "category": "medication" },
+    { "match": ["aspirin"], "display": "Aspirin", "snomedCode": "293586001", "category": "medication" },
+    { "match": ["ibuprofen"], "display": "Ibuprofen", "snomedCode": "293619009", "category": "medication" },
+    { "match": ["codeine"], "display": "Codeine", "snomedCode": "293742005", "category": "medication" },
+    { "match": ["morphine"], "display": "Morphine", "snomedCode": "294506009", "category": "medication" },
+    { "match": ["insulin"], "display": "Insulin", "snomedCode": "67866001", "category": "medication" },
+    {
+      "id": "peanut",
+      "match": ["peanut", "peanuts", "groundnut", "groundnuts", "arachis"],
+      "display": "Peanut",
+      "snomedCode": "75413007",
+      "category": "food"
+    },
+    {
+      "id": "soybean",
+      "match": [
+        "soybean",
+        "soybeans",
+        "soyabean",
+        "soyabeans",
+        "soya bean",
+        "soya beans",
+        "soy bean",
+        "soy beans"
+      ],
+      "display": "Soybean",
+      "snomedCode": "256355007",
+      "category": "food"
+    },
+    { "match": ["tree nut", "tree nuts", "almond", "walnut"], "display": "Tree nut", "snomedCode": "91934008", "category": "food" },
+    { "match": ["shellfish", "shrimp", "prawn"], "display": "Shellfish", "snomedCode": "44027008", "category": "food" },
+    { "match": ["fish"], "display": "Fish", "snomedCode": "44027008", "category": "food" },
+    { "match": ["egg", "eggs"], "display": "Egg", "snomedCode": "91930004", "category": "food" },
+    { "match": ["milk", "dairy", "lactose"], "display": "Cow's milk protein", "snomedCode": "47703008", "category": "food" },
+    { "match": ["wheat", "gluten"], "display": "Wheat", "snomedCode": "89811004", "category": "food" },
+    { "match": ["latex"], "display": "Latex", "snomedCode": "111088004", "category": "environment" },
+    { "match": ["pollen", "hay fever"], "display": "Pollen", "snomedCode": "256259004", "category": "environment" },
+    { "match": ["dust", "dust mite"], "display": "House dust mite", "snomedCode": "264287008", "category": "environment" },
+    { "match": ["bee", "wasp", "insect sting"], "display": "Insect venom", "snomedCode": "424213003", "category": "environment" }
+  ]
+}
