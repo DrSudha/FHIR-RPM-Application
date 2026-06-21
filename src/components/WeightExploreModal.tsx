@@ -39,6 +39,7 @@ interface WeightExploreModalProps {
   initialPatientIndex?: number;
   onClose: () => void;
   onMarkReviewed: () => void;
+  readOnly?: boolean;
 }
 
 function formatVitalTimeLabel(dateStr: string): string {
@@ -52,6 +53,7 @@ export default function WeightExploreModal({
   initialPatientIndex = 0,
   onClose,
   onMarkReviewed,
+  readOnly = false,
 }: WeightExploreModalProps) {
   const router = useRouter();
   const [activeIndex, setActiveIndex] = useState(initialPatientIndex);
@@ -289,9 +291,11 @@ export default function WeightExploreModal({
             <button type="button" className="btn btn-secondary" onClick={onClose}>
               Close
             </button>
+            {!readOnly && (
             <button type="button" className="btn btn-primary" onClick={onMarkReviewed}>
               Mark reviewed
             </button>
+            )}
           </div>
           <button
             type="button"

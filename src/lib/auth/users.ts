@@ -4,6 +4,7 @@ import path from 'path';
 import { hashPassword } from '@/lib/auth/password';
 import { resolveDefaultAvatarPath } from '@/lib/auth/userAvatars';
 import type { PublicUser, StoredUser, UserRole } from '@/lib/auth/types';
+import { isValidUserRole } from '@/lib/auth/permissions';
 
 type UserStore = {
   users: StoredUser[];
@@ -144,6 +145,50 @@ export async function createUser(input: {
   };
 
   store.users.push(user);
+  await writeStore(store);
+  return toPublicUser(user);
+}
+
+export async function updateUserDetails(
+  userId: string,
+  input: { name: string; email: string; role: UserRole }
+): Promise<PublicUser> {
+  const store = await readStore();
+  const user = store.users.find((entry) => entry.id === userId);
+  if (!user) throw new Error('User not found.');
+
+  const email = input.email.trim().toLowerCase();
+  const name = input.name.trim();
+
+  if (!email || !name) {
+    throw new Error('Name and email are required.');
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error('Please enter a valid email address.');
+  }
+
+  if (store.users.some((entry) => entry.id !== userId && entry.email === email)) {
+    throw new Error('A user with this email already exists.');
+  }
+
+  if (!isValidUserRole(input.role)) {
+    throw new Error('Invalid role selected.');
+  }
+
+  if (user.role === 'admin' && input.role !== 'admin') {
+    const otherActiveAdmins = store.users.filter(
+      (entry) => entry.id !== userId && entry.role === 'admin' && entry.active
+    );
+    if (otherActiveAdmins.length === 0) {
+      throw new Error('At least one active administrator is required.');
+    }
+  }
+
+  user.email = email;
+  user.name = name;
+  user.role = input.role;
+  user.updatedAt = new Date().toISOString();
   await writeStore(store);
   return toPublicUser(user);
 }

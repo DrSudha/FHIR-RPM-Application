@@ -40,6 +40,7 @@ interface MedicationRefillModalProps {
   initialPatientIndex?: number;
   onClose: () => void;
   onRefillInitiated: () => void;
+  readOnly?: boolean;
 }
 
 export default function MedicationRefillModal({
@@ -47,6 +48,7 @@ export default function MedicationRefillModal({
   initialPatientIndex = 0,
   onClose,
   onRefillInitiated,
+  readOnly = false,
 }: MedicationRefillModalProps) {
   const [activeIndex, setActiveIndex] = useState(initialPatientIndex);
   const [medications, setMedications] = useState<any[]>([]);
@@ -140,7 +142,7 @@ export default function MedicationRefillModal({
   );
 
   const handleInitiateRefill = async (medication: any) => {
-    if (!activePatient?.id || !medication.id || initiatingId) return;
+    if (readOnly || !activePatient?.id || !medication.id || initiatingId) return;
 
     setInitiatingId(medication.id);
 
@@ -267,6 +269,10 @@ export default function MedicationRefillModal({
                             <span className="med-refill-initiated-badge">
                               <CheckCircle2 size={14} />
                               Refill initiated
+                            </span>
+                          ) : readOnly ? (
+                            <span className="text-muted" style={{ fontSize: '0.75rem' }}>
+                              View only
                             </span>
                           ) : (
                             <button

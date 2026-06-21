@@ -1,7 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { requireAdminSession, requireSession } from '@/lib/auth/dal';
+import { requireAdminSession, requireSession, requireWriteSession } from '@/lib/auth/dal';
 import { validatePassword, verifyPassword } from '@/lib/auth/password';
 import {
   buildSessionPayload,
@@ -9,12 +9,14 @@ import {
   setSessionCookie,
 } from '@/lib/auth/session';
 import type { AuthActionState, UserRole } from '@/lib/auth/types';
+import { isValidUserRole } from '@/lib/auth/permissions';
 import {
   createUser,
   findUserByEmail,
   listUsers,
   setUserActive,
   updateUserAvatar,
+  updateUserDetails,
   updateUserPassword,
 } from '@/lib/auth/users';
 import {
@@ -85,7 +87,7 @@ export async function createUserAction(
   const passwordError = validatePassword(password);
   if (passwordError) return { error: passwordError };
 
-  if (role !== 'admin' && role !== 'clinician') {
+  if (!isValidUserRole(role)) {
     return { error: 'Invalid role selected.' };
   }
 
@@ -118,6 +120,45 @@ export async function resetUserPasswordAction(
     return { success: 'Password updated successfully.' };
   } catch (error) {
     return { error: error instanceof Error ? error.message : 'Unable to update password.' };
+  }
+}
+
+export async function updateUserAction(
+  _prevState: AuthActionState,
+  formData: FormData
+): Promise<AuthActionState> {
+  const session = await requireAdminSession();
+
+  const userId = String(formData.get('userId') || '');
+  const name = String(formData.get('name') || '').trim();
+  const email = String(formData.get('email') || '').trim();
+  const role = String(formData.get('role') || 'clinician') as UserRole;
+
+  if (!userId || !name || !email) {
+    return { error: 'Name and email are required.' };
+  }
+
+  if (!isValidUserRole(role)) {
+    return { error: 'Invalid role selected.' };
+  }
+
+  try {
+    const updated = await updateUserDetails(userId, { name, email, role });
+
+    if (session.userId === userId) {
+      await setSessionCookie(
+        buildSessionPayload({
+          id: updated.id,
+          email: updated.email,
+          name: updated.name,
+          role: updated.role,
+        })
+      );
+    }
+
+    return { success: `Updated ${updated.name}.` };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Unable to update user.' };
   }
 }
 

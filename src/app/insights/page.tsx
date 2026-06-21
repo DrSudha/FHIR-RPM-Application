@@ -26,6 +26,8 @@ import {
 } from 'chart.js';
 import RpmLogoIcon from '@/components/RpmLogoIcon';
 import HeaderUserChip from '@/components/HeaderUserChip';
+import ReadOnlyBanner from '@/components/ReadOnlyBanner';
+import { useSessionUser } from '@/hooks/useSessionUser';
 import {
   loadInsightsSnapshot,
   type InsightsSnapshot,
@@ -81,6 +83,7 @@ export default function InsightsPage() {
   const [snapshot, setSnapshot] = useState<InsightsSnapshot | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { canMutate } = useSessionUser();
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -357,6 +360,8 @@ export default function InsightsPage() {
         </div>
         <HeaderUserChip />
       </header>
+
+      {!canMutate && <ReadOnlyBanner />}
 
       <div className="insights-toolbar">
         <div className="insights-toolbar-title">

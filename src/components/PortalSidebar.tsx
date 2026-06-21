@@ -8,10 +8,15 @@ export type PortalSidebarActive = 'register' | 'insights' | 'users' | 'home';
 
 type PortalSidebarProps = {
   isAdmin: boolean;
+  canMutate?: boolean;
   active?: PortalSidebarActive;
 };
 
-export default function PortalSidebar({ isAdmin, active = 'home' }: PortalSidebarProps) {
+export default function PortalSidebar({
+  isAdmin,
+  canMutate = true,
+  active = 'home',
+}: PortalSidebarProps) {
   const router = useRouter();
 
   return (
@@ -21,7 +26,12 @@ export default function PortalSidebar({ isAdmin, active = 'home' }: PortalSideba
         <button
           type="button"
           className={`btn btn-primary portal-sidebar-btn ${active === 'register' ? 'portal-sidebar-btn-active' : ''}`}
-          onClick={() => router.push('/patient/register')}
+          onClick={() => {
+            if (canMutate) router.push('/patient/register');
+          }}
+          disabled={!canMutate}
+          title={canMutate ? 'Register a new patient' : 'Read-only access — registration disabled'}
+          aria-disabled={!canMutate}
         >
           <UserPlus size={16} />
           Register Patient

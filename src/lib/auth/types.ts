@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'clinician';
+export type UserRole = 'admin' | 'clinician' | 'viewer';
 
 export type StoredUser = {
   id: string;
@@ -38,4 +38,11 @@ export type AuthActionState = {
 export const ROLE_LABELS: Record<UserRole, string> = {
   admin: 'Administrator',
   clinician: 'Care Coordinator',
+  viewer: 'Read-only Viewer',
+};
+
+export const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
+  admin: 'Full access including user management and all clinical actions.',
+  clinician: 'Can register and manage patients, complete tasks, and edit clinical data.',
+  viewer: 'Can browse the portal and view all data; cannot add, edit, or delete anything.',
 };

@@ -2,18 +2,18 @@
 
 import React, { useActionState, useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Shield, UserPlus } from 'lucide-react';
+import { ArrowLeft, Pencil, Shield, UserPlus, X } from 'lucide-react';
 import {
   changeOwnPasswordAction,
   createUserAction,
   listUsersAction,
   resetUserPasswordAction,
   toggleUserActiveAction,
+  updateUserAction,
   uploadUserAvatarAction,
 } from '@/app/actions/auth';
 import UserAvatarUploadForm from '@/components/UserAvatarUploadForm';
-import type { AuthActionState, PublicUser, UserRole } from '@/lib/auth/types';
-import { ROLE_LABELS } from '@/lib/auth/types';
+import { ROLE_LABELS, type AuthActionState, PublicUser, UserRole } from '@/lib/auth/types';
 
 const emptyState: AuthActionState = {};
 
@@ -30,7 +30,14 @@ function formatDate(iso: string): string {
 export default function UserManagementPage() {
   const [users, setUsers] = useState<PublicUser[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<{ name: string; email: string; role: UserRole }>({
+    name: '',
+    email: '',
+    role: 'clinician',
+  });
   const [createState, createAction, createPending] = useActionState(createUserAction, emptyState);
+  const [updateState, updateAction, updatePending] = useActionState(updateUserAction, emptyState);
   const [resetState, resetAction, resetPending] = useActionState(resetUserPasswordAction, emptyState);
   const [passwordState, passwordAction, passwordPending] = useActionState(
     changeOwnPasswordAction,
@@ -56,10 +63,41 @@ export default function UserManagementPage() {
   }, []);
 
   useEffect(() => {
-    if (createState?.success || resetState?.success || passwordState?.success || avatarState?.success) {
+    if (
+      createState?.success ||
+      updateState?.success ||
+      resetState?.success ||
+      passwordState?.success ||
+      avatarState?.success
+    ) {
       refreshUsers();
     }
-  }, [createState?.success, resetState?.success, passwordState?.success, avatarState?.success]);
+  }, [
+    createState?.success,
+    updateState?.success,
+    resetState?.success,
+    passwordState?.success,
+    avatarState?.success,
+  ]);
+
+  useEffect(() => {
+    if (updateState?.success) {
+      setEditingUserId(null);
+    }
+  }, [updateState?.success]);
+
+  const startEditing = (user: PublicUser) => {
+    setEditingUserId(user.id);
+    setEditDraft({
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    });
+  };
+
+  const cancelEditing = () => {
+    setEditingUserId(null);
+  };
 
   const handleToggleActive = async (userId: string, active: boolean) => {
     const result = await toggleUserActiveAction(userId, active);
@@ -80,7 +118,7 @@ export default function UserManagementPage() {
         <div>
           <h1 style={{ margin: 0, fontSize: '1.35rem' }}>User management</h1>
           <p className="text-muted" style={{ margin: '0.25rem 0 0', fontSize: '0.875rem' }}>
-            Create accounts, manage headshots, reset passwords, and control access
+            Create accounts, edit user details, manage headshots, reset passwords, and control access
           </p>
         </div>
       </div>
@@ -121,9 +159,13 @@ export default function UserManagementPage() {
             <label className="form-group">
               <span className="form-label">Role</span>
               <select className="form-input" name="role" defaultValue="clinician">
-                <option value="clinician">Care Coordinator</option>
-                <option value="admin">Administrator</option>
+                <option value="clinician">{ROLE_LABELS.clinician}</option>
+                <option value="viewer">{ROLE_LABELS.viewer}</option>
+                <option value="admin">{ROLE_LABELS.admin}</option>
               </select>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem', display: 'block' }}>
+                Administrator: full access · Care Coordinator: clinical edits · Read-only Viewer: view only
+              </span>
             </label>
             {createState?.error && <p className="auth-form-error">{createState.error}</p>}
             {createState?.success && <p className="auth-form-success">{createState.success}</p>}
@@ -176,14 +218,59 @@ export default function UserManagementPage() {
               </tr>
             </thead>
             <tbody>
-              {users.map((user) => (
-                <tr key={user.id}>
+              {users.map((user) => {
+                const isEditing = editingUserId === user.id;
+
+                return (
+                <tr key={user.id} className={isEditing ? 'auth-user-row-editing' : undefined}>
                   <td>
                     <UserAvatarUploadForm user={user} uploadAction={avatarAction} />
                   </td>
-                  <td>{user.name}</td>
-                  <td>{user.email}</td>
-                  <td>{ROLE_LABELS[user.role as UserRole]}</td>
+                  <td>
+                    {isEditing ? (
+                      <input
+                        className="form-input auth-user-edit-input"
+                        value={editDraft.name}
+                        onChange={(e) => setEditDraft((current) => ({ ...current, name: e.target.value }))}
+                        required
+                      />
+                    ) : (
+                      user.name
+                    )}
+                  </td>
+                  <td>
+                    {isEditing ? (
+                      <input
+                        className="form-input auth-user-edit-input"
+                        type="email"
+                        value={editDraft.email}
+                        onChange={(e) => setEditDraft((current) => ({ ...current, email: e.target.value }))}
+                        required
+                      />
+                    ) : (
+                      user.email
+                    )}
+                  </td>
+                  <td>
+                    {isEditing ? (
+                      <select
+                        className="form-input auth-user-edit-input"
+                        value={editDraft.role}
+                        onChange={(e) =>
+                          setEditDraft((current) => ({
+                            ...current,
+                            role: e.target.value as UserRole,
+                          }))
+                        }
+                      >
+                        <option value="clinician">Care Coordinator</option>
+                        <option value="viewer">Read-only Viewer</option>
+                        <option value="admin">Administrator</option>
+                      </select>
+                    ) : (
+                      ROLE_LABELS[user.role as UserRole]
+                    )}
+                  </td>
                   <td>
                     <span className={`auth-user-status ${user.active ? 'active' : 'inactive'}`}>
                       {user.active ? 'Active' : 'Inactive'}
@@ -192,6 +279,37 @@ export default function UserManagementPage() {
                   <td>{formatDate(user.createdAt)}</td>
                   <td>
                     <div className="auth-user-actions">
+                      {isEditing ? (
+                        <form action={updateAction} className="auth-user-edit-form">
+                          <input type="hidden" name="userId" value={user.id} />
+                          <input type="hidden" name="name" value={editDraft.name} />
+                          <input type="hidden" name="email" value={editDraft.email} />
+                          <input type="hidden" name="role" value={editDraft.role} />
+                          <button type="submit" className="btn btn-primary auth-edit-btn" disabled={updatePending}>
+                            {updatePending ? 'Saving…' : 'Save'}
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-secondary auth-edit-btn"
+                            onClick={cancelEditing}
+                            disabled={updatePending}
+                          >
+                            <X size={14} />
+                            Cancel
+                          </button>
+                        </form>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn btn-secondary auth-edit-btn"
+                          onClick={() => startEditing(user)}
+                        >
+                          <Pencil size={14} />
+                          Edit
+                        </button>
+                      )}
+                      {!isEditing && (
+                        <>
                       <form action={resetAction} className="auth-reset-form">
                         <input type="hidden" name="userId" value={user.id} />
                         <input
@@ -216,10 +334,13 @@ export default function UserManagementPage() {
                       >
                         {user.active ? 'Deactivate' : 'Activate'}
                       </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
-              ))}
+              );
+              })}
               {users.length === 0 && !isRefreshing && (
                 <tr>
                   <td colSpan={7} className="text-muted" style={{ textAlign: 'center', padding: '1.5rem' }}>
@@ -232,6 +353,8 @@ export default function UserManagementPage() {
         </div>
         {resetState?.error && <p className="auth-form-error">{resetState.error}</p>}
         {resetState?.success && <p className="auth-form-success">{resetState.success}</p>}
+        {updateState?.error && <p className="auth-form-error">{updateState.error}</p>}
+        {updateState?.success && <p className="auth-form-success">{updateState.success}</p>}
         {avatarState?.error && <p className="auth-form-error">{avatarState.error}</p>}
         {avatarState?.success && <p className="auth-form-success">{avatarState.success}</p>}
         {avatarPending && (

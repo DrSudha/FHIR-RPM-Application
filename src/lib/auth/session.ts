@@ -36,7 +36,7 @@ export async function verifySessionToken(token: string): Promise<SessionPayload 
       typeof userId !== 'string' ||
       typeof email !== 'string' ||
       typeof name !== 'string' ||
-      (role !== 'admin' && role !== 'clinician') ||
+      (role !== 'admin' && role !== 'clinician' && role !== 'viewer') ||
       typeof loggedInAt !== 'string'
     ) {
       return null;

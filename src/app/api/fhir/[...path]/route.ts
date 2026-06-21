@@ -11,6 +11,17 @@ async function handleProxy(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    if (
+      request.method !== 'GET' &&
+      request.method !== 'HEAD' &&
+      session.role === 'viewer'
+    ) {
+      return NextResponse.json(
+        { error: 'Read-only access: changes are not permitted.' },
+        { status: 403 }
+      );
+    }
+
     const { path } = await paramsPromise;
     const fhirBaseUrl = process.env.FHIR_BASE_URL;
     

@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Search, UserPlus, Edit3, Heart, RefreshCw, ChevronRight, AlertCircle, AlertTriangle, ClipboardList, Bell, CheckCircle2, Circle } from 'lucide-react';
 import PatientForm from '@/components/PatientForm';
 import PortalSidebar from '@/components/PortalSidebar';
+import ReadOnlyBanner from '@/components/ReadOnlyBanner';
+import { useSessionUser } from '@/hooks/useSessionUser';
 import WeightExploreModal, { type WeightExplorePatient } from '@/components/WeightExploreModal';
 import MedicationRefillModal, {
   type MedicationRefillPatient,
@@ -88,28 +90,7 @@ export default function Home() {
     patients: WeightExplorePatient[];
   } | null>(null);
   const patientPanelRef = useRef<HTMLDivElement>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    fetch('/api/auth/me')
-      .then(async (response) => {
-        if (!response.ok) return null;
-        const data = await response.json();
-        return data.user as { role?: string } | null;
-      })
-      .then((user) => {
-        if (!cancelled) setIsAdmin(user?.role === 'admin');
-      })
-      .catch(() => {
-        if (!cancelled) setIsAdmin(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { canMutate, isAdmin } = useSessionUser();
 
   const handlePortalTabClick = (tab: PortalTab) => {
     setExpandedPortalTab((current) => (current === tab ? null : tab));
@@ -735,7 +716,8 @@ export default function Home() {
   }, [patients, attentionNotifications]);
 
   const handleEditClick = (e: React.MouseEvent, patient: any) => {
-    e.stopPropagation(); // Avoid row click navigation
+    e.stopPropagation();
+    if (!canMutate) return;
     setEditingPatient(patient);
     setIsFormOpen(true);
   };
@@ -749,7 +731,8 @@ export default function Home() {
 
     if (
       activeTaskView?.action === 'med-refills' &&
-      activeTaskView.highlights.has(patientId)
+      activeTaskView.highlights.has(patientId) &&
+      canMutate
     ) {
       const modalPatients: MedicationRefillPatient[] = Array.from(
         activeTaskView.highlights.keys()
@@ -795,11 +778,13 @@ export default function Home() {
         const result = await resolveCardiacVitalsTask(cardiacPatients);
         expandCategories = result.expandCategories;
         result.highlights.forEach((h) => highlights.set(h.patientId, h.reason));
-        saveTaskVitalOverrides(
-          result.highlights
-            .map((h) => h.vitalOverride)
-            .filter((override): override is NonNullable<typeof override> => Boolean(override))
-        );
+        if (canMutate) {
+          saveTaskVitalOverrides(
+            result.highlights
+              .map((h) => h.vitalOverride)
+              .filter((override): override is NonNullable<typeof override> => Boolean(override))
+          );
+        }
       } else if (task.action === 'med-refills') {
         const result = await resolveMedicationRefillsTask(
           patients.map((p) => ({ id: p.id, clinicalCategory: p.clinicalCategory as CareCategory }))
@@ -838,6 +823,12 @@ export default function Home() {
   };
 
   const clearActiveTaskView = () => {
+    if (!canMutate) {
+      setActiveTaskView(null);
+      setExpandedCareCategories(new Set());
+      return;
+    }
+
     if (activeTaskView) {
       const reviewedAt = new Date().toLocaleTimeString(undefined, {
         hour: '2-digit',
@@ -893,6 +884,11 @@ export default function Home() {
   };
 
   const handleWeightExploreMarkReviewed = () => {
+    if (!canMutate) {
+      setWeightExploreView(null);
+      return;
+    }
+
     if (weightExploreView?.notificationId) {
       const reviewedAt = new Date().toLocaleTimeString(undefined, {
         hour: '2-digit',
@@ -940,11 +936,13 @@ export default function Home() {
         const result = await resolveCardiacVitalsTask(cardiacPatients);
         const highlights = new Map<string, string>();
         result.highlights.forEach((h) => highlights.set(h.patientId, h.reason));
-        saveTaskVitalOverrides(
-          result.highlights
-            .map((h) => h.vitalOverride)
-            .filter((override): override is NonNullable<typeof override> => Boolean(override))
-        );
+        if (canMutate) {
+          saveTaskVitalOverrides(
+            result.highlights
+              .map((h) => h.vitalOverride)
+              .filter((override): override is NonNullable<typeof override> => Boolean(override))
+          );
+        }
         applyListViewResult(note.id, 'notification', note.title, result.expandCategories, highlights);
       } else if (note.action === 'missed-glucose') {
         const diabeticPatients = patients.filter((p) => p.clinicalCategory === 'diabetic');
@@ -1103,6 +1101,7 @@ export default function Home() {
         </td>
         <td style={{ textAlign: 'right' }}>
           <div style={{ display: 'inline-flex', gap: '0.5rem' }} onClick={(e) => e.stopPropagation()}>
+            {canMutate && (
             <button
               className="btn btn-secondary"
               onClick={(e) => handleEditClick(e, patient)}
@@ -1111,6 +1110,7 @@ export default function Home() {
               <Edit3 size={12} />
               Edit
             </button>
+            )}
             <button
               className="btn btn-secondary btn-icon"
               onClick={() => handleRowClick(patient.id)}
@@ -1168,9 +1168,10 @@ export default function Home() {
       </header>
 
       <div className="portal-main-layout">
-        <PortalSidebar isAdmin={isAdmin} active="home" />
+        <PortalSidebar isAdmin={isAdmin} canMutate={canMutate} active="home" />
 
         <div className="portal-main-content">
+      {!canMutate && <ReadOnlyBanner />}
       {/* Portal toolbar: tasks & notifications tabs */}
       <div className={`portal-toolbar ${expandedPortalTab ? 'portal-toolbar-expanded' : 'portal-toolbar-collapsed'}`}>
         <div className="portal-tabs">
@@ -1445,14 +1446,23 @@ export default function Home() {
                   type="button"
                   className="btn btn-secondary task-view-clear"
                   onClick={clearActiveTaskView}
-                  disabled={activeTaskView.action === 'med-refills' && !allRefillsComplete}
+                  disabled={
+                    !canMutate ||
+                    (activeTaskView.action === 'med-refills' && !allRefillsComplete)
+                  }
                   title={
-                    activeTaskView.action === 'med-refills' && !allRefillsComplete
+                    !canMutate
+                      ? 'Read-only access — cannot mark tasks complete'
+                      : activeTaskView.action === 'med-refills' && !allRefillsComplete
                       ? 'Initiate all due refills before marking this task complete'
                       : undefined
                   }
                 >
-                  {activeTaskView.sourceType === 'notification' ? 'Mark reviewed' : 'Mark completed'}
+                  {canMutate
+                    ? activeTaskView.sourceType === 'notification'
+                      ? 'Mark reviewed'
+                      : 'Mark completed'
+                    : 'Dismiss view'}
                 </button>
               </div>
             )}
@@ -1494,10 +1504,12 @@ export default function Home() {
           {patients.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '4rem 2rem' }}>
               <p className="text-muted" style={{ marginBottom: '1.5rem' }}>No patients found.</p>
+              {canMutate && (
               <button className="btn btn-primary" onClick={handleRegisterClick}>
                 <UserPlus size={14} />
                 Register Patient
               </button>
+              )}
             </div>
           ) : (
             <div className="patient-category-list" style={{ padding: '0 1.5rem 1.5rem' }}>
@@ -1582,6 +1594,7 @@ export default function Home() {
           patients={weightExploreView.patients}
           onClose={handleWeightExploreClose}
           onMarkReviewed={handleWeightExploreMarkReviewed}
+          readOnly={!canMutate}
         />
       )}
 
@@ -1591,10 +1604,11 @@ export default function Home() {
           initialPatientIndex={refillModalView.initialPatientIndex}
           onClose={() => setRefillModalView(null)}
           onRefillInitiated={() => setRefillProgressVersion((current) => current + 1)}
+          readOnly={!canMutate}
         />
       )}
 
-      {editingPatient && (
+      {canMutate && editingPatient && (
       <PatientForm
         isOpen={isFormOpen}
         onClose={() => {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
@@ -8,32 +8,12 @@ import RpmLogoIcon from '@/components/RpmLogoIcon';
 import HeaderUserChip from '@/components/HeaderUserChip';
 import PortalSidebar from '@/components/PortalSidebar';
 import PatientForm from '@/components/PatientForm';
+import { useSessionUser } from '@/hooks/useSessionUser';
 import type { CareCategory } from '@/lib/careCategory';
 
 export default function RegisterPatientPage() {
   const router = useRouter();
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    fetch('/api/auth/me')
-      .then(async (response) => {
-        if (!response.ok) return null;
-        const data = await response.json();
-        return data.user as { role?: string } | null;
-      })
-      .then((user) => {
-        if (!cancelled) setIsAdmin(user?.role === 'admin');
-      })
-      .catch(() => {
-        if (!cancelled) setIsAdmin(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { canMutate, isAdmin } = useSessionUser();
 
   const handleSuccess = ({ patientId }: { patientId: string; careCategory: CareCategory }) => {
     router.push(`/patient/${patientId}`);
@@ -55,7 +35,7 @@ export default function RegisterPatientPage() {
       </header>
 
       <div className="portal-main-layout">
-        <PortalSidebar isAdmin={isAdmin} active="register" />
+        <PortalSidebar isAdmin={isAdmin} canMutate={canMutate} active="register" />
 
         <div className="portal-main-content">
           <div className="patient-register-toolbar">
@@ -65,7 +45,17 @@ export default function RegisterPatientPage() {
             </Link>
           </div>
 
-          <PatientForm variant="page" onClose={() => router.push('/')} onSuccess={handleSuccess} />
+          {canMutate ? (
+            <PatientForm variant="page" onClose={() => router.push('/')} onSuccess={handleSuccess} />
+          ) : (
+            <div className="glass-card patient-form-page">
+              <h2 className="patient-form-page-title">Register New Patient</h2>
+              <p className="text-muted" style={{ marginTop: '0.75rem' }}>
+                Your account has read-only access. You can view patients and clinical data but cannot
+                register new patients. Contact an administrator if you need edit access.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

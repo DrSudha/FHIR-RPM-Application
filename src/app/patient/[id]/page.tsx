@@ -59,6 +59,8 @@ import {
 } from '@/lib/patientClinicalWorkspace';
 import PatientClinicalNotesSection from '@/components/PatientClinicalNotesSection';
 import PatientAssessmentsSection from '@/components/PatientAssessmentsSection';
+import { useSessionUser } from '@/hooks/useSessionUser';
+import ReadOnlyBanner from '@/components/ReadOnlyBanner';
 import {
   CLINICAL_LIST_PREVIEW_COUNT,
   sortConditionsForDisplay,
@@ -194,6 +196,7 @@ function weightReadingsForWeek(anchor: Date, readings: DataPoint[]): DataPoint[]
 export default function PatientDetails() {
   const router = useRouter();
   const { id } = useParams();
+  const { canMutate } = useSessionUser();
   
   const [patient, setPatient] = useState<any | null>(null);
   const [vitals, setVitals] = useState<{ [key: string]: DataPoint[] }>({});
@@ -1991,6 +1994,7 @@ export default function PatientDetails() {
 
   return (
     <div className="app-container">
+      {!canMutate && <ReadOnlyBanner />}
       {/* 1. Demographics Banner */}
       <section className="demographics-banner">
         <div className="demographics-main">
@@ -2058,11 +2062,13 @@ export default function PatientDetails() {
           <PatientClinicalNotesSection
             patientId={id as string}
             snapshot={clinicalWorkspaceSnapshot}
+            readOnly={!canMutate}
           />
           <PatientAssessmentsSection
             patientId={id as string}
             cohort={clinicalWorkspaceCohort}
             snapshot={clinicalWorkspaceSnapshot}
+            readOnly={!canMutate}
           />
         </section>
       )}

@@ -25,11 +25,13 @@ const DEFAULT_ROLE = 'Care Coordinator';
 interface PatientClinicalNotesSectionProps {
   patientId: string;
   snapshot: ClinicalWorkspaceSnapshot | null;
+  readOnly?: boolean;
 }
 
 export default function PatientClinicalNotesSection({
   patientId,
   snapshot,
+  readOnly = false,
 }: PatientClinicalNotesSectionProps) {
   const [notes, setNotes] = useState<ClinicalNote[]>([]);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -49,6 +51,7 @@ export default function PatientClinicalNotesSection({
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
+    if (readOnly) return;
     const trimmed = text.trim();
     if (trimmed.length < 10) {
       setFormError('Please enter at least a brief clinical note (10 characters minimum).');
@@ -89,7 +92,7 @@ export default function PatientClinicalNotesSection({
             </p>
           </div>
         </button>
-        {isExpanded && (
+        {isExpanded && !readOnly && (
           <button
             type="button"
             className="btn btn-secondary clinical-workspace-header-action"

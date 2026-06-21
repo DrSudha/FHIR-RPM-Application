@@ -1,6 +1,7 @@
 import { getSessionFromCookies, getSessionFromRequest } from '@/lib/auth/session';
 import { findUserById } from '@/lib/auth/users';
-import type { PublicUser, SessionPayload } from '@/lib/auth/types';
+import type { PublicUser, SessionPayload, UserRole } from '@/lib/auth/types';
+import { canMutateData } from '@/lib/auth/permissions';
 
 export async function verifySession(): Promise<SessionPayload | null> {
   const session = await getSessionFromCookies();
@@ -8,7 +9,13 @@ export async function verifySession(): Promise<SessionPayload | null> {
 
   const user = await findUserById(session.userId);
   if (!user || !user.active) return null;
-  return session;
+
+  return {
+    ...session,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+  };
 }
 
 export async function verifySessionFromRequest(
@@ -19,7 +26,13 @@ export async function verifySessionFromRequest(
 
   const user = await findUserById(session.userId);
   if (!user || !user.active) return null;
-  return session;
+
+  return {
+    ...session,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+  };
 }
 
 export async function getCurrentUser(): Promise<PublicUser | null> {
@@ -51,6 +64,14 @@ export async function requireSession(): Promise<SessionPayload> {
 export async function requireAdminSession(): Promise<SessionPayload> {
   const session = await requireSession();
   if (session.role !== 'admin') {
+    throw new Error('Forbidden');
+  }
+  return session;
+}
+
+export async function requireWriteSession(): Promise<SessionPayload> {
+  const session = await requireSession();
+  if (!canMutateData(session.role)) {
     throw new Error('Forbidden');
   }
   return session;

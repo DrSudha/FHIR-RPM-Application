@@ -32,12 +32,14 @@ interface PatientAssessmentsSectionProps {
   patientId: string;
   cohort: ClinicalWorkspaceCohort;
   snapshot: ClinicalWorkspaceSnapshot | null;
+  readOnly?: boolean;
 }
 
 export default function PatientAssessmentsSection({
   patientId,
   cohort,
   snapshot,
+  readOnly = false,
 }: PatientAssessmentsSectionProps) {
   const templates = getAssessmentTemplatesForCohort(cohort);
   const [assessments, setAssessments] = useState<PatientAssessment[]>([]);
@@ -84,6 +86,7 @@ export default function PatientAssessmentsSection({
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
+    if (readOnly) return;
     if (!selectedTemplate) {
       setFormError('Select an assessment to assign.');
       return;
@@ -121,7 +124,7 @@ export default function PatientAssessmentsSection({
             </p>
           </div>
         </button>
-        {isExpanded && (
+        {isExpanded && !readOnly && (
           <button
             type="button"
             className="btn btn-secondary clinical-workspace-header-action"
