@@ -1,6 +1,7 @@
 import {
   simplifyMedicationDisplayName,
   resolveMedicationProfile,
+  resolveMedicationForm,
   frequencyLabel,
 } from '@/lib/medicationCatalog';
 import { getConditionSnomedCoding } from '@/lib/snomedCodes';
@@ -58,6 +59,27 @@ export function getMedicationName(medication: any): string {
     medication.medicationReference?.display ||
     'Unknown Medication';
   return simplifyMedicationDisplayName(raw);
+}
+
+function getMedicationRawName(medication: any): string {
+  return (
+    medication.medicationCodeableConcept?.text ||
+    medication.medicationCodeableConcept?.coding?.[0]?.display ||
+    medication.medicationReference?.display ||
+    ''
+  );
+}
+
+export function getMedicationForm(medication: any): string {
+  const dosageInstruction = medication.dosageInstruction?.[0];
+  const fromResource =
+    dosageInstruction?.doseAndRate?.[0]?.type?.text ||
+    dosageInstruction?.doseAndRate?.[0]?.type?.coding?.[0]?.display;
+  if (fromResource?.trim()) return fromResource.trim();
+
+  const rawName = getMedicationRawName(medication);
+  const route = getMedicationRoute(medication);
+  return resolveMedicationForm(rawName, route);
 }
 
 export function getMedicationStartDate(medication: any): Date | null {

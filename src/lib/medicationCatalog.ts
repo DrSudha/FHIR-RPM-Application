@@ -8,6 +8,7 @@ export type MedicationCatalogEntry = {
   frequency: number;
   route: string;
   unit: string;
+  form?: string;
 };
 
 export type ResolvedMedicationProfile = MedicationCatalogEntry & {
@@ -15,6 +16,48 @@ export type ResolvedMedicationProfile = MedicationCatalogEntry & {
 };
 
 const CATALOG_ENTRIES = catalogData.entries as MedicationCatalogEntry[];
+
+const DEFAULT_FORM_BY_ROUTE: Record<string, string> = {
+  Oral: 'Tablet',
+  Subcutaneous: 'Injection',
+  'Intravenous infusion': 'Infusion',
+  Inhalation: 'Inhaler',
+  Sublingual: 'Sublingual tablet',
+  Topical: 'Ointment',
+  Rectal: 'Suppository',
+  Ophthalmic: 'Eye drops',
+  Otic: 'Ear drops',
+};
+
+export function defaultFormForRoute(route: string): string {
+  return DEFAULT_FORM_BY_ROUTE[route] || 'Tablet';
+}
+
+/** Infer dosage form from free-text medication names (e.g. "500 mg cap"). */
+export function inferMedicationFormFromName(rawName: string): string | null {
+  const text = rawName.toLowerCase();
+  if (/\bsyrup\b|\bsuspension\b|\belixir\b/.test(text)) return 'Syrup';
+  if (/\bointment\b|\bcream\b|\blotion\b|\bpaste\b/.test(text)) return 'Ointment';
+  if (/\bgel\b/.test(text)) return 'Gel';
+  if (/\bcapsule\b|\bcapsules\b|\bcaps?\b(?!\s*ule)/.test(text)) return 'Capsule';
+  if (/\btablet\b|\btablets\b|\btabs?\b(?!\s*let)/.test(text)) return 'Tablet';
+  if (/\binjection\b|\binjectable\b|\bprefilled pen\b|\bpen\b/.test(text)) return 'Injection';
+  if (/\binhaler\b|\bnebulizer\b|\binhalation\b/.test(text)) return 'Inhaler';
+  if (/\bdrops\b/.test(text)) return 'Drops';
+  if (/\bsolution\b/.test(text)) return 'Solution';
+  return null;
+}
+
+export function resolveMedicationForm(rawName: string, route?: string): string {
+  const fromName = inferMedicationFormFromName(rawName);
+  if (fromName) return fromName;
+
+  const profile = lookupMedicationProfile(rawName);
+  if (profile?.form) return profile.form;
+  if (profile?.route) return defaultFormForRoute(profile.route);
+
+  return defaultFormForRoute(route || 'Oral');
+}
 
 export function frequencyLabel(frequency: number): string {
   if (frequency === 1) return 'Once daily';
@@ -100,10 +143,12 @@ export function resolveMedicationProfile(
     frequency: 1,
     route: 'Oral',
     unit: 'mg',
+    form: 'Tablet',
   };
 
   return {
     ...profile,
+    form: profile.form ?? defaultFormForRoute(profile.route),
     dose: adjustMedicationDose(profile.doseMg, age, weightKg),
   };
 }

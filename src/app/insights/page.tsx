@@ -374,7 +374,7 @@ export default function InsightsPage() {
               Updated {formatGeneratedAt(snapshot.generatedAt)}
             </span>
           )}
-          <Link href="/" className="btn btn-secondary">
+          <Link href="/" className="btn btn-primary">
             <ArrowLeft size={14} />
             Back to patients
           </Link>

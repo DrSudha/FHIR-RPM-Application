@@ -5,7 +5,7 @@ interface RpmLogoIconProps {
   className?: string;
 }
 
-/** Heart + vitals waveform + wireless signal — remote patient monitoring */
+/** Pro Health mark — shield, vitals pulse, and connected monitoring */
 export default function RpmLogoIcon({ size = 20, className = '' }: RpmLogoIconProps) {
   return (
     <svg
@@ -17,40 +17,28 @@ export default function RpmLogoIcon({ size = 20, className = '' }: RpmLogoIconPr
       className={className}
       aria-hidden="true"
     >
-      {/* Wireless signal arcs */}
       <path
-        d="M18.5 5.5c1.2 1.2 1.9 2.8 1.9 4.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        opacity="0.45"
-      />
-      <path
-        d="M16.5 7.5c0.7 0.7 1.1 1.6 1.1 2.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        opacity="0.75"
-      />
-      <circle cx="15.2" cy="11.2" r="1.1" fill="currentColor" />
-
-      {/* Heart */}
-      <path
-        d="M12 18.5S4.5 14.2 4.5 9.5C4.5 7.2 6.3 5.5 8.5 5.5c1.4 0 2.6 0.7 3.5 1.7c0.9-1 2.1-1.7 3.5-1.7 2.2 0 4 1.7 4 4 0 4.7-7.5 9-7.5 9Z"
+        d="M12 2.75L18.25 5.75V11.25C18.25 15.35 12 20.25 12 20.25C12 20.25 5.75 15.35 5.75 11.25V5.75L12 2.75Z"
         fill="currentColor"
-        fillOpacity="0.22"
+        fillOpacity="0.18"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth="1.55"
         strokeLinejoin="round"
       />
-
-      {/* ECG / vitals trace */}
       <path
-        d="M6.5 11.2h1.8l1-2.2 1.4 4.4 1.2-3.1h4.6"
+        d="M7.25 11.75H9.1L10.35 8.85L11.75 14.5L13.05 10.6H16.75"
         stroke="currentColor"
-        strokeWidth="1.45"
+        strokeWidth="1.65"
         strokeLinecap="round"
         strokeLinejoin="round"
+      />
+      <circle cx="17.15" cy="6.85" r="1.15" fill="currentColor" />
+      <path
+        d="M15.35 4.65C16.15 5.45 16.65 6.55 16.65 7.85"
+        stroke="currentColor"
+        strokeWidth="1.35"
+        strokeLinecap="round"
+        opacity="0.72"
       />
     </svg>
   );

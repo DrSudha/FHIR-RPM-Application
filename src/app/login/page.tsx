@@ -2,7 +2,7 @@
 
 import React, { useActionState } from 'react';
 import Link from 'next/link';
-import { Activity } from 'lucide-react';
+import RpmLogoIcon from '@/components/RpmLogoIcon';
 import { loginAction } from '@/app/actions/auth';
 import type { AuthActionState } from '@/lib/auth/types';
 
@@ -16,7 +16,7 @@ export default function LoginPage() {
       <div className="auth-card glass-card">
         <div className="auth-brand">
           <div className="app-logo-mark auth-logo-mark">
-            <Activity size={22} className="app-logo-icon" />
+            <RpmLogoIcon size={22} className="app-logo-icon" />
           </div>
           <h1>Pro Health</h1>
           <p>Remote Patient Monitoring — sign in to continue</p>

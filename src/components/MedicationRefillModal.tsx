@@ -15,6 +15,7 @@ import {
 import {
   formatMedicationDate,
   getMedicationDosage,
+  getMedicationForm,
   getMedicationFrequency,
   getMedicationName,
   getMedicationRoute,
@@ -255,7 +256,14 @@ export default function MedicationRefillModal({
                       key={medication.id}
                       className={due ? 'med-refill-due-row' : undefined}
                     >
-                      <td style={{ fontWeight: 500 }}>{getMedicationName(medication)}</td>
+                      <td style={{ fontWeight: 500 }}>
+                        <div className="medication-name-cell">
+                          <span>{getMedicationName(medication)}</span>
+                          <span className="medication-form-label">
+                            {getMedicationForm(medication)}
+                          </span>
+                        </div>
+                      </td>
                       <td>{getMedicationDosage(medication)}</td>
                       <td>{getMedicationFrequency(medication)}</td>
                       <td>{getMedicationRoute(medication)}</td>

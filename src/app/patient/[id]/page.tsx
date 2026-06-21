@@ -68,6 +68,7 @@ import {
   getConditionName,
   getConditionDisplayDate,
   getMedicationName,
+  getMedicationForm,
   getMedicationStartDate,
   getMedicationEndDate,
   getMedicationDosage,
@@ -2877,6 +2878,7 @@ export default function PatientDetails() {
                 <tbody>
                   {visibleMedications.map((med) => {
                     const medName = getMedicationName(med);
+                    const medForm = getMedicationForm(med);
                     const status = med.status || 'unknown';
                     const dose = getMedicationDosage(med);
                     const frequency = getMedicationFrequency(med);
@@ -2893,7 +2895,12 @@ export default function PatientDetails() {
 
                     return (
                       <tr key={med.id}>
-                        <td style={{ fontWeight: 500, color: 'var(--text-main)' }}>{medName}</td>
+                        <td style={{ fontWeight: 500, color: 'var(--text-main)' }}>
+                          <div className="medication-name-cell">
+                            <span>{medName}</span>
+                            <span className="medication-form-label">{medForm}</span>
+                          </div>
+                        </td>
                         <td style={{ fontWeight: 500 }}>{dose}</td>
                         <td>{frequency}</td>
                         <td>{route}</td>
