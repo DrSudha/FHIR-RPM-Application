@@ -15,9 +15,11 @@ import {
 } from '@/lib/careCategory';
 import {
   buildPatientTelecomWithPhone,
-  getPatientPhone,
-  isValidPatientPhone,
+  DEFAULT_PHONE_COUNTRY_ID,
+  getPatientPhoneParts,
+  isValidPatientPhoneLocalNumber,
 } from '@/lib/patientContact';
+import { getPhoneCountries } from '@/lib/phoneCountryCodes';
 import {
   applyAllergiesToPatient,
   fetchPatientAllergySummary,
@@ -31,6 +33,8 @@ const selectChevronStyle = {
   appearance: 'none' as const,
   background: `var(--bg-input) url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") no-repeat right 0.75rem center/1.25rem`,
 };
+
+const PHONE_COUNTRIES = getPhoneCountries();
 
 interface PatientFormProps {
   isOpen?: boolean;
@@ -51,7 +55,8 @@ export default function PatientForm({
   const [familyName, setFamilyName] = useState('');
   const [gender, setGender] = useState('');
   const [birthDate, setBirthDate] = useState('');
-  const [phone, setPhone] = useState('');
+  const [phoneCountryId, setPhoneCountryId] = useState(DEFAULT_PHONE_COUNTRY_ID);
+  const [phoneLocalNumber, setPhoneLocalNumber] = useState('');
   const [allergies, setAllergies] = useState('');
   const [height, setHeight] = useState('');
   const [careCategory, setCareCategory] = useState<CareCategory | ''>('');
@@ -76,7 +81,9 @@ export default function PatientForm({
       setGivenName(given);
       setFamilyName(family);
       setGender(g);
-      setPhone(getPatientPhone(patientToEdit));
+      const phoneParts = getPatientPhoneParts(patientToEdit);
+      setPhoneCountryId(phoneParts.countryId);
+      setPhoneLocalNumber(phoneParts.localNumber);
       setAllergies('');
       void fetchPatientAllergySummary(patientToEdit.id, patientToEdit)
         .then(setAllergies)
@@ -137,7 +144,8 @@ export default function PatientForm({
       setFamilyName('');
       setGender('');
       setBirthDate('');
-      setPhone('');
+      setPhoneCountryId(DEFAULT_PHONE_COUNTRY_ID);
+      setPhoneLocalNumber('');
       setAllergies('');
       setHeight('');
       setCareCategory('');
@@ -203,10 +211,10 @@ export default function PatientForm({
     } else if (!validateDate(birthDate)) {
       errors.birthDate = 'Please enter a valid past date in DD-MM-YYYY format (e.g. 25-05-1990)';
     }
-    if (!phone.trim()) {
-      errors.phone = 'Phone / contact number is required';
-    } else if (!isValidPatientPhone(phone)) {
-      errors.phone = 'Please enter a valid phone number (7–15 digits)';
+    if (!phoneLocalNumber.trim()) {
+      errors.phone = 'Contact number is required';
+    } else if (!isValidPatientPhoneLocalNumber(phoneLocalNumber)) {
+      errors.phone = 'Please enter a valid contact number (7–15 digits)';
     }
 
     if (height.trim()) {
@@ -244,7 +252,7 @@ export default function PatientForm({
         ],
         gender: gender,
         birthDate: standardBirthDate,
-        telecom: buildPatientTelecomWithPhone(phone),
+        telecom: buildPatientTelecomWithPhone(phoneCountryId, phoneLocalNumber),
       };
 
       if (patientToEdit) {
@@ -263,7 +271,11 @@ export default function PatientForm({
             ],
             gender: gender,
             birthDate: standardBirthDate,
-            telecom: buildPatientTelecomWithPhone(phone, patientToEdit.telecom),
+            telecom: buildPatientTelecomWithPhone(
+              phoneCountryId,
+              phoneLocalNumber,
+              patientToEdit.telecom
+            ),
           },
           allergies
         );
@@ -528,17 +540,43 @@ export default function PatientForm({
           )}
 
           <div className="form-group">
-            <label htmlFor="phone" className="form-label">Phone / Contact Number</label>
-            <input
-              id="phone"
-              type="tel"
-              className="form-input"
-              placeholder="e.g. +41 79 123 4567"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              disabled={isSubmitting}
-              autoComplete="tel"
-            />
+            <span className="form-label">Phone / Contact Number</span>
+            <div className="phone-contact-row">
+              <div className="phone-contact-country">
+                <label htmlFor="phoneCountry" className="form-sublabel">
+                  Country
+                </label>
+                <select
+                  id="phoneCountry"
+                  className="form-input"
+                  value={phoneCountryId}
+                  onChange={(e) => setPhoneCountryId(e.target.value)}
+                  disabled={isSubmitting}
+                  style={selectChevronStyle}
+                >
+                  {PHONE_COUNTRIES.map((country) => (
+                    <option key={country.id} value={country.id}>
+                      {country.name} ({country.dialCode})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="phone-contact-number">
+                <label htmlFor="phoneLocalNumber" className="form-sublabel">
+                  Contact Number
+                </label>
+                <input
+                  id="phoneLocalNumber"
+                  type="tel"
+                  className="form-input"
+                  placeholder="e.g. 555 123 4567"
+                  value={phoneLocalNumber}
+                  onChange={(e) => setPhoneLocalNumber(e.target.value)}
+                  disabled={isSubmitting}
+                  autoComplete="tel-national"
+                />
+              </div>
+            </div>
             {validationErrors.phone && (
               <span style={{ fontSize: '0.75rem', color: 'var(--danger)', marginTop: '0.25rem', display: 'block' }}>
                 {validationErrors.phone}
@@ -602,7 +640,7 @@ export default function PatientForm({
           </div>
 
           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '1.25rem' }}>
-            * Click the calendar icon to choose date of birth and scroll back to earlier years. Phone number is required for patient contact. Allergies are optional; leave blank for NKA. Care category and General Care sub category are stored as clinical Conditions linked to this patient. Height is recorded as a separate Observation.
+            * Click the calendar icon to choose date of birth and scroll back to earlier years. Select a country and enter the contact number (country code is applied automatically). Allergies are optional; leave blank for NKA. Care category and General Care sub category are stored as clinical Conditions linked to this patient. Height is recorded as a separate Observation.
           </span>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem', borderTop: '1px solid var(--border-card)', paddingTop: '1.25rem' }}>

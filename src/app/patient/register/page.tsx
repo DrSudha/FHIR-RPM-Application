@@ -39,7 +39,7 @@ export default function RegisterPatientPage() {
 
         <div className="portal-main-content">
           <div className="patient-register-toolbar">
-            <Link href="/" className="btn btn-secondary">
+            <Link href="/" className="btn btn-primary">
               <ArrowLeft size={14} />
               Back to patients
             </Link>
